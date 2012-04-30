@@ -298,7 +298,22 @@
   }
 
   $(document).ready(function() {
-    var AppView, BoxModel, BoxView, CellModel, CellView, SudokuGrid;
+    var AppView, BoxModel, BoxView, CellModel, CellView, StringUtil, SudokuGrid;
+    StringUtil = (function() {
+
+      function StringUtil() {}
+
+      StringUtil.prototype.trim = function(val) {
+        return val != null ? val.replace(/^\s+|\s+$/g, "") : void 0;
+      };
+
+      StringUtil.prototype.isNumber = function(n) {
+        return !isNaN(parseFloat(n)) && isFinite(n);
+      };
+
+      return StringUtil;
+
+    })();
     CellModel = (function(_super) {
 
       __extends(CellModel, _super);
@@ -319,6 +334,10 @@
           solved: this.cell.solved,
           value: this.cell.value
         });
+      };
+
+      CellModel.prototype.possibleValue = function(val) {
+        return this.cell.possibleValue(val);
       };
 
       return CellModel;
@@ -402,8 +421,18 @@
       };
 
       CellView.prototype.update = function() {
-        this.model.cell.solved = false;
-        return this.model.cell.solve(+($(this.el).find('input').val()));
+        var input, val;
+        input = $(this.el).find('input');
+        $(this.el).removeClass('error');
+        val = StringUtil.prototype.trim(input.val());
+        if (!(val != null)) return;
+        if (!StringUtil.prototype.isNumber(val) || +val < 1 || +val > 9 || !this.model.possibleValue(+val)) {
+          $(this.el).addClass('error');
+          return input.val('  ' + input.val());
+        } else {
+          this.model.cell.solved = false;
+          return this.model.cell.solve(+($(this.el).find('input').val()));
+        }
       };
 
       CellView.prototype.initialize = function() {
