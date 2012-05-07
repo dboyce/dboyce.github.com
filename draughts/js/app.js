@@ -212,11 +212,12 @@
         });
         $(this.row).append(view.render().el);
         dragDrop.addDropTarget(view.el, function(el) {
-          var pieceView;
+          var move, pieceView;
           pieceView = $(el).data('piece');
           if (pieceView == null) throw "couldn't locate piece for: " + el;
-          if (pieceView.piece.canMoveTo(model.square)) {
-            _this.board.board.movePiece(pieceView.piece, model.square);
+          move = pieceView.piece.getMove(model.square);
+          if (move != null) {
+            move.take();
             return true;
           } else {
             return false;
@@ -331,23 +332,26 @@
       return this.move(jumpTo);
     };
 
-    Piece.prototype.canMoveTo = function(square) {
-      var colDelta, hopped, rowDelta;
+    Piece.prototype.getMove = function(square) {
+      var colDelta, hopped, ret, rowDelta;
       if (!((square != null) && square.isEmpty())) return false;
       colDelta = square.col - this.square.col;
       rowDelta = square.row - this.square.row;
       if (Math.abs(colDelta) === 2 && Math.abs(rowDelta) === 2) {
         hopped = this.board.getSquare(this.square.row + rowDelta / 2, this.square.col + colDelta / 2);
         if ((hopped != null) && !hopped.isEmpty() && hopped.piece.colour === this.colour.flip()) {
-          return this instanceof King || rowDelta / 2 === this.vectors[0][0];
-        } else {
-          return false;
+          if (this instanceof King || rowDelta / 2 === this.vectors[0][0]) {
+            ret = new Move(this, this.square, square, 1);
+            ret.hops.push(hopped);
+            return ret;
+          }
         }
       } else if (Math.abs(colDelta) === 1 && Math.abs(rowDelta) === 1) {
-        return this instanceof King || rowDelta === this.vectors[0][0];
-      } else {
-        return false;
+        if (this instanceof King || rowDelta === this.vectors[0][0]) {
+          return new Move(this, this.square, square, 0);
+        }
       }
+      return null;
     };
 
     return Piece;
