@@ -5,7 +5,7 @@
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   $(document).ready(function() {
-    var AppView, BoardModel, PieceModel, PieceView, SquareModel, SquareView, appView, computer, dragDrop, piece, _i, _len, _ref;
+    var AppView, BoardModel, PieceModel, PieceView, SquareModel, SquareView, appView, computer, dragDrop;
     PieceModel = (function(_super) {
 
       __extends(PieceModel, _super);
@@ -89,7 +89,8 @@
           }),
           appView: this.appView
         });
-        return this.pieceViews[piece] = view;
+        this.pieceViews[piece] = view;
+        if (piece.colour === white) return dragDrop.addDraggable(view.el);
       };
 
       BoardModel.prototype.populate = function() {
@@ -123,7 +124,7 @@
 
       PieceView.prototype.attributes = function() {
         return {
-          "class": "piece " + (this.model.piece.colour.name.toLowerCase()) + " " + (this.king ? 'king' : '')
+          "class": "piece " + (this.model.piece.colour.name.toLowerCase()) + " " + (this.model.piece instanceof King ? 'king' : '')
         };
       };
 
@@ -131,7 +132,7 @@
         this.piece = this.model.piece;
         this.appView = this.options.appView;
         this.king = this.piece instanceof King;
-        if (this.king) $(this.el).append("<div class='king'>K</div>");
+        if (this.king) $(this.el).append("K");
         return $(this.el).data('piece', this);
       };
 
@@ -242,11 +243,6 @@
     })(Backbone.View);
     dragDrop = new DragNDropManager();
     appView = new AppView();
-    _ref = appView.board.board.pieces[white];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      piece = _ref[_i];
-      if (piece != null) dragDrop.addDraggable(appView.board.pieceViews[piece].el);
-    }
     computer = new ComputerPlayer(appView.board.board, black);
     return appView.board.on('move', function() {
       try {
@@ -334,7 +330,7 @@
 
     Piece.prototype.getMove = function(square) {
       var colDelta, hopped, ret, rowDelta;
-      if (!((square != null) && square.isEmpty())) return false;
+      if (!((square != null) && square.isEmpty())) return null;
       colDelta = square.col - this.square.col;
       rowDelta = square.row - this.square.row;
       if (Math.abs(colDelta) === 2 && Math.abs(rowDelta) === 2) {
@@ -490,7 +486,7 @@
 
   ComputerPlayer = (function() {
 
-    ComputerPlayer.prototype.depth = 3;
+    ComputerPlayer.prototype.depth = 4;
 
     function ComputerPlayer(board, colour) {
       this.board = board;
