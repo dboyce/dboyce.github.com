@@ -2,7 +2,8 @@
   var Colour, ComputerPlayer, DragNDropManager, DraughtsBoard, KeyType, King, Move, Piece, Square, api, black, white,
     __hasProp = Object.prototype.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; },
-    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+    __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __slice = Array.prototype.slice;
 
   $(document).ready(function() {
     var AppView, BoardModel, PieceModel, PieceView, SquareModel, SquareView, appView, computer, dragDrop;
@@ -386,14 +387,18 @@
       return !(this.piece != null);
     };
 
+    Square.prototype.toString = function() {
+      return "" + 'abcdefgh'[this.col] + "," + this.row;
+    };
+
     return Square;
 
   })();
 
   DraughtsBoard = (function() {
 
-    function DraughtsBoard() {
-      var i, j, row;
+    function DraughtsBoard(factory) {
+      var board, cols, i, j, name, row, _len, _ref;
       this.pieces = {};
       this.pieces[white] = [];
       this.pieces[black] = [];
@@ -405,6 +410,37 @@
         for (j = 0; j <= 7; j++) {
           row.push(new Square(i, j, i % 2 === j % 2 ? black : white));
         }
+      }
+      if (factory != null) {
+        board = this;
+        cols = {};
+        _ref = 'abcdefgh'.split('');
+        for (i = 0, _len = _ref.length; i < _len; i++) {
+          name = _ref[i];
+          cols[name] = i;
+        }
+        factory.call({
+          black: function() {
+            var args, col, i, _len2, _results, _step;
+            args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+            _results = [];
+            for (i = 0, _len2 = args.length, _step = 2; i < _len2; i += _step) {
+              col = args[i];
+              _results.push(new Piece(black, board).move(board.getSquare(args[i + 1], args[i])));
+            }
+            return _results;
+          },
+          white: function() {
+            var args, col, i, _len2, _results, _step;
+            args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+            _results = [];
+            for (i = 0, _len2 = args.length, _step = 2; i < _len2; i += _step) {
+              col = args[i];
+              _results.push(new Piece(white, board).move(board.getSquare(args[i + 1], args[i])));
+            }
+            return _results;
+          }
+        }, cols);
       }
     }
 
@@ -528,13 +564,13 @@
             takenPiece.square = null;
             piece.move(jumpTo);
             if (piece.isKinged()) {
-              current = new Move(piece, fromSquare, toSquare, jumpTo, colour, score + takenPiece.value);
+              current = new Move(piece, fromSquare, jumpTo, score + takenPiece.value);
               if (depth < this.depth) {
                 counterMove = this.pickMove(this.board.pieces[colour.flip()], this.board.pieces[colour], colour.flip(), depth + 1, false, 0);
                 if (counterMove != null) current.score -= counterMove.score;
               }
             } else {
-              current = this.pickMove([piece], opponentPieces, colour.flip(), depth, true, score + takenPiece.value);
+              current = this.pickMove([piece], opponentPieces, colour, depth, true, score + takenPiece.value);
               if (current == null) {
                 current = new Move(piece, fromSquare, jumpTo, score + takenPiece.value);
               }
@@ -599,7 +635,15 @@
     };
 
     Move.prototype.betterThan = function(move) {
-      return !(move != null) || move.score < this.score;
+      return !(move != null) || move.score < this.score && (!move.takesPieces || this.takesPieces());
+    };
+
+    Move.prototype.takesPieces = function() {
+      return this.hops.length !== 0;
+    };
+
+    Move.prototype.toString = function() {
+      return "" + this.from + " " + (this.hops.join(' ')) + " " + this.to;
     };
 
     return Move;
