@@ -635,7 +635,9 @@
     };
 
     Move.prototype.betterThan = function(move) {
-      return !(move != null) || move.score < this.score && (!move.takesPieces || this.takesPieces());
+      var testPieceTaking;
+      testPieceTaking = (move != null) && (!move.takesPieces() || this.takesPieces());
+      return !(move != null) || testPieceTaking && (move.score < this.score || move.score === this.score && Math.random() > 0.5);
     };
 
     Move.prototype.takesPieces = function() {
