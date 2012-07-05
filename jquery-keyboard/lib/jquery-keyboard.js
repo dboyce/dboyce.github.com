@@ -1,7 +1,9 @@
 (function() {
-  var KeyCombination, KeyEventManager, Keys, Map, ObjectKeyAdapter, OidSupport, PrimitiveKeyAdapter, Set, adapt, equals, get_oid, hash, next_oid, oid, plugin,
+  var $, KeyCombination, KeyEventManager, Keys, Map, ObjectKeyAdapter, OidSupport, PrimitiveKeyAdapter, Set, activeKeys, adapt, equals, get_oid, hash, next_oid, oid, plugin,
     __slice = Array.prototype.slice,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+  $ = jQuery;
 
   next_oid = 0;
 
@@ -211,6 +213,20 @@
 
   })();
 
+  activeKeys = new Set();
+
+  $(document).ready(function() {
+    $(document).keydown(function(e) {
+      return activeKeys.add(e.which);
+    });
+    $(document).keyup(function(e) {
+      return activeKeys.add(e.which);
+    });
+    return $(window).blur(function(e) {
+      return activeKeys.clear();
+    });
+  });
+
   KeyEventManager = (function() {
 
     function KeyEventManager(mappings, selector) {
@@ -218,51 +234,44 @@
       this.selector = selector;
       this.keyup = __bind(this.keyup, this);
       this.keydown = __bind(this.keydown, this);
-      this.focus = __bind(this.focus, this);
       if (!this.mappings) this.mappings = new Map();
-      this.focus();
       $(document).on({
-        focus: this.focus,
         keydown: this.keydown,
         keyup: this.keyup
       }, this.selector);
     }
 
     KeyEventManager.prototype.combo = function() {
-      return new KeyCombination(this.activeKeys.values());
+      return new KeyCombination(activeKeys.values());
     };
 
     KeyEventManager.prototype.context = function(key, target, e) {
       return {
         key: key,
         dispatcher: this,
-        keys: this.activeKeys,
+        keys: activeKeys,
         target: target,
         e: e
       };
     };
 
-    KeyEventManager.prototype.focus = function() {
-      return this.activeKeys = new Set();
-    };
-
     KeyEventManager.prototype.keydown = function(e) {
       var mapping;
-      this.activeKeys.add(e.which);
+      activeKeys.add(e.which);
       mapping = this.mappings.get(this.combo());
       if ((mapping != null ? mapping.down : void 0) != null) {
         mapping.down.call(e.target, this.context(e.which, e.target, e));
-        return e.preventDefault();
+        return typeof e.preventDefault === "function" ? e.preventDefault() : void 0;
       }
     };
 
     KeyEventManager.prototype.keyup = function(e) {
       var mapping;
-      this.activeKeys.remove(e.which);
+      activeKeys.remove(e.which);
       mapping = this.mappings.get(this.combo());
       if ((mapping != null ? mapping.up : void 0) != null) {
         maping.up.call(e.target, this.context(e.which, e.target, e));
-        return e.preventDefault();
+        return typeof e.preventDefault === "function" ? e.preventDefault() : void 0;
       }
     };
 

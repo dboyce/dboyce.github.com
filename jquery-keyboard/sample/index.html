@@ -6,7 +6,7 @@
 	<title>listless</title>
 
     <style type="text/css">
-        body {
+        body, textarea {
             font-size: 85%;
             font-family: 'Arial';
             colour: #4F4F4F;
@@ -46,7 +46,9 @@
                 this.children = [];
 
                 this.el = $('<div></div>');
-                this.input = $('<input name="task" class="task" placeholder="what needs to be done?"/>');
+                this.input = $('<input name="task" class="task" ' +
+                        'size="50" ' +
+                        'placeholder="what needs to be done?"></input>');
                 this.childList = $('<ul style="display:none"></ul>');
 
                 if(this.parent !== undefined) {
@@ -76,7 +78,7 @@
             Task.prototype.addChild = function(task, relativeTo, before) {
                 if(this.children.length === 0) { this.childList.show(); }
 
-                if(task.parent !== undefined && task.parent !== this) {
+                if(task.parent !== undefined) {
                     task.parent.removeChild(task);
                 }
 
@@ -211,6 +213,7 @@
                                 current.parent.taskAfter().focus();
                                 break;
                             }
+                            current = current.parent;
                         }
                     }
                     else {
@@ -219,6 +222,20 @@
                 }
 
             };
+
+            var moveTaskUp = function() {
+                var task = Task.forElement(this);
+                if(task !== undefined && !task.isFirst()) {
+                    task.parent.addChild(task, task.taskBefore(), true).focus();
+                }
+            };
+
+            var moveTaskDown = function() {
+                var task = Task.forElement(this);
+                if(task !== undefined && !task.isLast()) {
+                    task.parent.addChild(task, task.taskAfter()).focus();
+                }
+            }
 
             //=========================================
             // keyboard bindings
@@ -243,6 +260,8 @@
                 this.bind(this.shift, this.tab).down(outdentTask);
                 this.bind(this.arw_up).down(prevTask);
                 this.bind(this.arw_down).down(nextTask);
+                this.bind(this.ctl, this.arw_up).down(moveTaskUp);
+                this.bind(this.ctl, this.arw_down).down(moveTaskDown);
 
             });
 
@@ -280,12 +299,16 @@
                         <td>tab</td>
                     </tr>
                     <tr>
-                        <td>Outdent Tab</td>
+                        <td>Outdent Task</td>
                         <td>shift+tab</td>
                     </tr>
                     <tr>
                         <td>Navigate</td>
                         <td>arrows</td>
+                    </tr>
+                    <tr>
+                        <td>Move Task</td>
+                        <td>ctr+up/down</td>
                     </tr>
                 </tbody>
             </table>
