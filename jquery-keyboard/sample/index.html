@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+	<meta charset="UTF-8" />
+	<title>Workslowy</title>
+
+    <style type="text/css">
+        body {
+            font-size: 85%;
+            font-family: 'Arial';
+            colour: #4F4F4F;
+        }
+        span.footnote {
+            font-size:40%;
+        }
+        table.instructions {
+            border: 1px solid #808080;
+            width:20em;
+
+        }
+        
+        tr, td {
+            padding: 0.5em;
+            margin: 0.5em;
+        }
+        colgroup.name {
+            background-color: #808080;
+            font-weight: bold;
+            width:11em;
+        }
+    </style>
+
+    <script type="text/javascript" src="js/jquery-1.7.2.min.js"></script>
+    <script type="text/javascript" src="../node_modules/underscore/underscore.js"></script>
+    <script type="text/javascript" src="../lib/jquery-keyboard.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function() {
+
+            //////////////////////////////////////
+
+            var Task = function(parent, relativeTo, before) {
+
+                this.parent = parent;
+                this.data = '';
+                this.children = [];
+
+                this.el = $('<div></div>');
+                this.input = $('<input name="task" class="task" placeholder="what needs to be done?"/>');
+                this.childList = $('<ul style="display:none"></ul>');
+
+                if(this.parent !== undefined) {
+                    this.parent.addChild(this, relativeTo, before);
+                    this.el.append(this.input);
+                }
+                this.el.append($('<div></div>').append(this.childList));
+                this.input.data('task', this);
+
+                var that = this;
+                this.input.change(function() {
+                    that.data = $(this).val();
+                });
+
+            };
+
+            Task.prototype.removeChild = function(task) {
+                var index = $.inArray(task, this.children);
+                if(index !== -1) {
+                    this.children.splice(index, 1);
+                    task.el.detach();
+                    task.parent = undefined;
+                }
+                return task;
+            };
+
+            Task.prototype.addChild = function(task, relativeTo, before) {
+                if(this.children.length === 0) { this.childList.show(); }
+
+                if(task.parent !== undefined && task.parent !== this) {
+                    task.parent.removeChild(task);
+                }
+
+                task.parent = this;
+
+                if(relativeTo == undefined) {
+                    this.childList.append(task.el);
+                    this.children.push(task);
+                }
+                else if(before) {
+                    this.children.splice(relativeTo.index(), 0, task)
+                    relativeTo.el.before(task.el);
+                }
+                else {
+                    relativeTo.el.after(task.el);
+                    this.children.splice(relativeTo.index() + 1, 0, task)
+                }
+                return task;
+            };
+
+            Task.prototype.deleteTask = function() {
+                if(this.parent !== null) {
+                    this.parent.removeChild(this);
+                }
+                this.el.remove();
+            };
+
+            Task.prototype.index = function() {
+                if(this.parent === undefined) return -1;
+                return $.inArray(this, this.parent.children);
+            };
+
+            Task.prototype.taskBefore = function() {
+                if(this.isFirst()) return undefined;
+                return this.parent.children[this.index() - 1];
+            };
+
+            Task.prototype.taskAfter = function() {
+                if(this.isLast()) return undefined;
+                return this.parent.children[this.index() + 1];
+            };
+
+            Task.prototype.isFirst = function() {
+                return this.index() === 0;
+            };
+
+            Task.prototype.isLast = function() {
+                return this.parent !== undefined && this.index() === (this.parent.children.length - 1);
+            };
+
+            Task.prototype.hasChildren = function() {
+                return this.children.length > 0;
+            }
+
+            Task.prototype.focus = function() {
+                this.input.focus();
+            };
+
+            Task.prototype.isRoot = function() {
+                return this.parent === undefined;
+            }
+
+            Task.forElement = function(e) {
+                return $(e).data('task');
+            };
+
+            //////////////////////////////////////
+
+            var rootTask = new Task();
+            $('#foo').append(rootTask.el);
+
+            var newTask = function(ctx) {
+                var task = new Task(rootTask);
+                task.focus();
+            };
+
+            var deleteTask = function(ctx) {
+                var task = Task.forElement(this);
+                if(task !== undefined) {
+                    prevTask.call(this);
+                    task.deleteTask();
+                }
+            };
+
+            var indentTask = function(ctx) {
+                var task = Task.forElement(this);
+                if(task !== undefined && task.parent !== undefined && !task.isFirst()) {
+                    task.taskBefore().addChild(task).focus();
+                }
+            };
+
+            var outdentTask = function(ctx) {
+                var task = Task.forElement(this);
+                if(task !== undefined && task.parent !== undefined && !task.parent.isRoot()) {
+                    task.parent.parent.addChild(task, task.parent).focus();
+                }
+            };
+
+            var prevTask = function() {
+
+                var task = Task.forElement(this);
+                if(task !== undefined) {
+                    if(task.isFirst()) {
+                        if(!task.parent.isRoot()) {
+                            task.parent.focus();
+                        }
+                    }
+                    else {
+                        var before = task.taskBefore();
+                        if(before.hasChildren()) {
+                            before.children[before.children.length - 1].focus();
+                        }
+                        else {
+                            before.focus();
+                        }
+                    }
+                }
+
+            };
+
+            var nextTask = function() {
+
+                var task = Task.forElement(this);
+                if(task !== undefined) {
+                    if(task.hasChildren()) {
+                        task.children[0].focus();
+                    }
+                    else if(task.isLast()) {
+                        var current = task;
+                        while(!current.parent.isRoot()) {
+                            if(!current.parent.isLast()) {
+                                current.parent.taskAfter().focus();
+                                break;
+                            }
+                        }
+                    }
+                    else {
+                        task.taskAfter().focus();
+                    }
+                }
+
+            };
+
+            //=========================================
+            // keyboard bindings
+            //=========================================
+
+            $(document).keyboard(function() {
+                this.bind(this.shift, this.enter).down(newTask);
+            });
+
+            $('input.task').keyboard(function() {
+                // shortcut to add new task
+                this.bind(this.enter).down(function() {
+                    var task = Task.forElement(this);
+                    if(task !== undefined && task.parent) {
+                        var newTask = new Task(task.parent, task);
+                        newTask.input.focus();
+                    }
+                });
+
+                this.bind(this.ctl, this.shift, this.backspace).down(deleteTask);
+                this.bind(this.tab).down(indentTask);
+                this.bind(this.shift, this.tab).down(outdentTask);
+                this.bind(this.arw_up).down(prevTask);
+                this.bind(this.arw_down).down(nextTask);
+
+            });
+
+            new Task(rootTask);
+        });
+    </script>
+
+
+</head>
+<body>
+    <div>
+        <h1>listing heavily <span class="footnote">(jquery-keyboard sample app)</span></h1>
+    </div>
+    <div>
+        <div style="float:left">
+            <h2>Key Bindings</h2>
+            <table class="instructions">
+                <colgroup span="1" class="name"></colgroup>
+                <colgroup span="1" class="value"></colgroup>
+                <tbody>
+                    <tr>
+                        <td>Add Task</td>
+                        <td>shift+enter</td>
+                    </tr>
+                    <tr>
+                        <td>Add After</td>
+                        <td>enter (when target task has focus)</td>
+                    </tr>
+                    <tr>
+                        <td>Delete Task</td>
+                        <td>ctl+shift+bckspace</td>
+                    </tr>
+                    <tr>
+                        <td>Indent Task</td>
+                        <td>tab</td>
+                    </tr>
+                    <tr>
+                        <td>Outdent Tab</td>
+                        <td>shift+tab</td>
+                    </tr>
+                    <tr>
+                        <td>Navigate</td>
+                        <td>arrows</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div style="float:left; margin:1em 3em; width:45em;">
+            <div>
+                create a list of stuff here... if you want. <p/> you can organize it into
+                hierarchies using the keyboard shortcuts listed to the left.
+            </div>
+            <form id="foo">
+            </form>
+        </div>
+    </div>
+</body>
+</html>
