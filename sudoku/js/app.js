@@ -425,8 +425,11 @@
         input = $(this.el).find('input');
         $(this.el).removeClass('error');
         val = StringUtil.prototype.trim(input.val());
-        if (!(val != null)) return;
-        if (!StringUtil.prototype.isNumber(val) || +val < 1 || +val > 9 || !this.model.possibleValue(+val)) {
+        if (!(val != null ? val.length : void 0)) {
+          this.model.cell.solved = false;
+          this.model.cell.possibilities = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+          return input.val('');
+        } else if (!StringUtil.prototype.isNumber(val) || +val < 1 || +val > 9 || !this.model.possibleValue(+val)) {
           $(this.el).addClass('error');
           return input.val('  ' + input.val());
         } else {
